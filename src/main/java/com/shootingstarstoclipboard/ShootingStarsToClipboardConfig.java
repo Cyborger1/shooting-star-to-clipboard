@@ -41,13 +41,13 @@ public interface ShootingStarsToClipboardConfig extends Config
 	}
 
 	@ConfigItem(
-		keyName = "showOnlyETA",
-		name = "Show Only ETA",
-		description = "If true, only the ETA time is shown, else also include From/To times.",
+		keyName = "timesToShow",
+		name = "Times to Show",
+		description = "Select the types of times to include in the copy text.",
 		position = 4
 	)
-	default boolean showOnlyETA()
+	default TimesToShow timesToShow()
 	{
-		return false;
+		return TimesToShow.ALL;
 	}
 }

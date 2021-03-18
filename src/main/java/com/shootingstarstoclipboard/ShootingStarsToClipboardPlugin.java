@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -92,16 +93,18 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 			Widget starBox = client.getWidget(STAR_BOX_WIDGET_GROUP, STAR_BOX_WIDGET_CHILD);
 			if (starBox != null)
 			{
+				Instant now = Instant.now().truncatedTo(ChronoUnit.MINUTES);
 				String text = Text.removeTags(starBox.getText().replace("<br>", " "));
 
 				Matcher m = STAR_PATTERN.matcher(text);
+
 				if (!m.matches())
 				{
 					return;
 				}
 
-				Instant from = getTime(m.group(4), m.group(5));
-				Instant to = getTime(m.group(6), m.group(7));
+				Instant from = getTime(now, m.group(4), m.group(5));
+				Instant to = getTime(now, m.group(6), m.group(7));
 				Instant eta = from.plus(Duration.between(from, to).dividedBy(2));
 
 				String datePattern = "HH:mm";
@@ -154,37 +157,45 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 			loc = loc + "/" + loc2;
 		}
 
-		StringBuilder sb = new StringBuilder();
-		sb.append(world).append(delim);
-		sb.append(loc).append(delim);
+		TimesToShow t = config.timesToShow();
 
-		if (!config.showOnlyETA())
+		StringBuilder sb = new StringBuilder();
+		sb.append(world);
+		sb.append(delim).append(loc);
+
+		if (t == TimesToShow.ALL || t == TimesToShow.FROM_TO_ONLY)
 		{
-			sb.append(formatter.format(from)).append(delim)
-				.append(formatter.format(to)).append(delim);
+			sb.append(delim).append(formatter.format(from))
+				.append(delim).append(formatter.format(to));
 		}
 
-		sb.append(formatter.format(eta));
+		if (t == TimesToShow.ALL || t == TimesToShow.ETA_ONLY)
+		{
+			sb.append(delim).append(formatter.format(eta));
+		}
 
 		return sb.toString();
 	}
 
 	private String getSuffixText(int world, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
 	{
-		if (config.showOnlyETA())
+		TimesToShow t = config.timesToShow();
+		StringBuilder sb = new StringBuilder();
+
+		sb.append("World: ").append(world);
+
+		if (t == TimesToShow.ALL || t == TimesToShow.FROM_TO_ONLY)
 		{
-			return String.format("World: %d, ETA: %s.",
-				world,
-				formatter.format(eta));
+			sb.append(", From: ").append(formatter.format(from))
+				.append(", To: ").append(formatter.format(to));
 		}
-		else
+
+		if (t == TimesToShow.ALL || t == TimesToShow.ETA_ONLY)
 		{
-			return String.format("World: %d, From: %s, To: %s, ETA: %s.",
-				world,
-				formatter.format(from),
-				formatter.format(to),
-				formatter.format(eta));
+			sb.append(", ETA: ").append(formatter.format(eta));
 		}
+
+		return sb.toString();
 	}
 
 	@Subscribe
@@ -204,12 +215,12 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 			.build());
 	}
 
-	private Instant getTime(String h, String m)
+	private Instant getTime(Instant baseTime, String h, String m)
 	{
 		final int hours = h != null ? Integer.parseInt(h) : 0;
 		final int minutes = m != null ? Integer.parseInt(m) : 0;
 
-		return Instant.now().plus(Duration.ofHours(hours)).plus(Duration.ofMinutes(minutes));
+		return baseTime.plus(Duration.ofHours(hours)).plus(Duration.ofMinutes(minutes));
 	}
 
 	/*
