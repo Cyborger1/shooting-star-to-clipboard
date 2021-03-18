@@ -50,4 +50,15 @@ public interface ShootingStarsToClipboardConfig extends Config
 	{
 		return TimesToShow.ALL;
 	}
+
+	@ConfigItem(
+		keyName = "addPVPIdentifier",
+		name = "Add PVP Identifier",
+		description = "Adds '(pvp)' after the world number when appropriate.",
+		position = 5
+	)
+	default boolean addPVPIdentifier()
+	{
+		return true;
+	}
 }

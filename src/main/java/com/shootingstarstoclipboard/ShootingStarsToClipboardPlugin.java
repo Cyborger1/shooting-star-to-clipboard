@@ -16,6 +16,7 @@ import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.WorldType;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.widgets.Widget;
@@ -120,23 +121,21 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 					.withZone(config.useUTCTimes() ? ZoneId.from(ZoneOffset.UTC) : ZoneId.systemDefault())
 					.withLocale(Locale.UK);
 
-				int world = client.getWorld();
-
 				String copyText;
 				switch (config.copyFormat())
 				{
 					case TRUNCATED_TEXT:
 						String t = m.group(1);
-						copyText = t.substring(0, 1).toUpperCase() + t.substring(1) + " " + getSuffixText(world, formatter, from, to, eta);
+						copyText = t.substring(0, 1).toUpperCase() + t.substring(1) + " " + getSuffixText(formatter, from, to, eta);
 						break;
 					case TAB_DELIMITED:
-						copyText = getDelimitedText(world, m.group(2), m.group(3), "\t", formatter, from, to, eta);
+						copyText = getDelimitedText(m.group(2), m.group(3), "\t", formatter, from, to, eta);
 						break;
 					case COMMA_DELIMITED:
-						copyText = getDelimitedText(world, m.group(2), m.group(3), ", ", formatter, from, to, eta);
+						copyText = getDelimitedText(m.group(2), m.group(3), ", ", formatter, from, to, eta);
 						break;
 					default:
-						copyText = text + " " + getSuffixText(world, formatter, from, to, eta);
+						copyText = text + " " + getSuffixText(formatter, from, to, eta);
 						break;
 				}
 
@@ -144,12 +143,12 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 					.getSystemClipboard()
 					.setContents(new StringSelection(copyText), null);
 
-				sendChatMessage(String.format("Shooting Stars info copied to clipboard for world %d.", world));
+				sendChatMessage(String.format("Shooting Stars info copied to clipboard for world %d.", client.getWorld()));
 			}
 		}
 	}
 
-	private String getDelimitedText(int world, String loc1, String loc2, String delim, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
+	private String getDelimitedText(String loc1, String loc2, String delim, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
 	{
 		String loc = loc1;
 		if (loc2 != null)
@@ -160,7 +159,12 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 		TimesToShow t = config.timesToShow();
 
 		StringBuilder sb = new StringBuilder();
-		sb.append(world);
+		sb.append(client.getWorld());
+		if (config.addPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
+		{
+			sb.append(" (pvp)");
+		}
+
 		sb.append(delim).append(loc);
 
 		if (t == TimesToShow.ALL || t == TimesToShow.FROM_TO_ONLY)
@@ -177,12 +181,17 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 		return sb.toString();
 	}
 
-	private String getSuffixText(int world, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
+	private String getSuffixText(DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
 	{
 		TimesToShow t = config.timesToShow();
 		StringBuilder sb = new StringBuilder();
 
-		sb.append("World: ").append(world);
+		sb.append("World: ").append(client.getWorld());
+
+		if (config.addPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
+		{
+			sb.append(" (pvp)");
+		}
 
 		if (t == TimesToShow.ALL || t == TimesToShow.FROM_TO_ONLY)
 		{
