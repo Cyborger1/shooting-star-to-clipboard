@@ -8,6 +8,7 @@ import lombok.Getter;
 public enum CopyFormat
 {
 	FULL_TEXT("Full Text"),
+	TRUNCATED_TEXT("Truncated Text"),
 	COMMA_DELIMITED("Comma Delimited"),
 	TAB_DELIMITED("Tab Delimited")
 	;

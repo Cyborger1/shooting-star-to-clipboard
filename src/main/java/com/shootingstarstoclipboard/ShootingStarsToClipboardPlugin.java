@@ -3,12 +3,18 @@ package com.shootingstarstoclipboard;
 import com.google.inject.Provides;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.WidgetLoaded;
 import net.runelite.api.widgets.Widget;
@@ -22,14 +28,32 @@ import net.runelite.client.util.Text;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Example"
+	name = "Stars to Clipboard",
+	description = "Puts shooting stars telescope predictions in your clipboard",
+	tags = {"Shooting", "Stars", "Star", "Clipboard"}
 )
 public class ShootingStarsToClipboardPlugin extends Plugin
 {
 	private static final int STAR_BOX_WIDGET_GROUP = 229;
 	private static final int STAR_BOX_WIDGET_CHILD = 1;
 
-	private boolean doProcessWidget = false;
+	// Close your eyes and pray for this regex to work
+	// Group 1 = Truncated
+	// Group 2 = Loc 1
+	// Group 3 = Loc 2
+	// Group 4 = Hours 1
+	// Group 5 = Minutes 1
+	// Group 6 = Hours 2
+	// Group 7 = Minutes 2
+	private static final Pattern STAR_PATTERN = Pattern.compile(
+		"^You see a shooting star! " +
+			"The star looks like it will land " +
+			"((?:in |on )(?:the )?((?:(?!\\bor\\b)[\\w ])+)" +
+			"(?: or (?:in |on )?(?:the )?([\\w ]+))? " +
+			"in the next (?:(\\d+) hours? )?(?:(\\d+)(?: minutes?)? )?" +
+			"to (?:(\\d+) hours? )?(?:(\\d+) minutes)?\\.)$");
+
+	private boolean doProcessWidget;
 
 	@Inject
 	private Client client;
@@ -49,11 +73,13 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 	@Override
 	protected void startUp() throws Exception
 	{
+		doProcessWidget = false;
 	}
 
 	@Override
 	protected void shutDown() throws Exception
 	{
+		doProcessWidget = false;
 	}
 
 	@Subscribe
@@ -61,22 +87,103 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 	{
 		if (doProcessWidget)
 		{
+			doProcessWidget = false;
+
 			Widget starBox = client.getWidget(STAR_BOX_WIDGET_GROUP, STAR_BOX_WIDGET_CHILD);
 			if (starBox != null)
 			{
 				String text = Text.removeTags(starBox.getText().replace("<br>", " "));
 
-				System.out.println(text);
+				Matcher m = STAR_PATTERN.matcher(text);
+				if (!m.matches())
+				{
+					return;
+				}
+
+				Instant from = getTime(m.group(4), m.group(5));
+				Instant to = getTime(m.group(6), m.group(7));
+				Instant eta = from.plus(Duration.between(from, to).dividedBy(2));
+
+				String datePattern = "HH:mm";
+				if (!config.useUTCTimes())
+				{
+					datePattern += " Z";
+				}
+				if (!config.useShortTimes())
+				{
+					datePattern = "yyyy-MM-dd " + datePattern;
+				}
+				DateTimeFormatter formatter = DateTimeFormatter.ofPattern(datePattern)
+					.withZone(config.useUTCTimes() ? ZoneId.from(ZoneOffset.UTC) : ZoneId.systemDefault())
+					.withLocale(Locale.UK);
+
+				int world = client.getWorld();
+
+				String copyText;
+				switch (config.copyFormat())
+				{
+					case TRUNCATED_TEXT:
+						String t = m.group(1);
+						copyText = t.substring(0, 1).toUpperCase() + t.substring(1) + " " + getSuffixText(world, formatter, from, to, eta);
+						break;
+					case TAB_DELIMITED:
+						copyText = getDelimitedText(world, m.group(2), m.group(3), "\t", formatter, from, to, eta);
+						break;
+					case COMMA_DELIMITED:
+						copyText = getDelimitedText(world, m.group(2), m.group(3), ", ", formatter, from, to, eta);
+						break;
+					default:
+						copyText = text + " " + getSuffixText(world, formatter, from, to, eta);
+						break;
+				}
 
 				Toolkit.getDefaultToolkit()
 					.getSystemClipboard()
-					.setContents(new StringSelection(text), null);
+					.setContents(new StringSelection(copyText), null);
 
-				sendChatMessage("Shooting Stars info copied to clipboard.");
+				sendChatMessage(String.format("Shooting Stars info copied to clipboard for world %d.", world));
 			}
+		}
+	}
 
+	private String getDelimitedText(int world, String loc1, String loc2, String delim, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
+	{
+		String loc = loc1;
+		if (loc2 != null)
+		{
+			loc = loc + "/" + loc2;
+		}
 
-			doProcessWidget = false;
+		StringBuilder sb = new StringBuilder();
+		sb.append(world).append(delim);
+		sb.append(loc).append(delim);
+
+		if (!config.showOnlyETA())
+		{
+			sb.append(formatter.format(from)).append(delim)
+				.append(formatter.format(to)).append(delim);
+		}
+
+		sb.append(formatter.format(eta));
+
+		return sb.toString();
+	}
+
+	private String getSuffixText(int world, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
+	{
+		if (config.showOnlyETA())
+		{
+			return String.format("World: %d, ETA: %s.",
+				world,
+				formatter.format(eta));
+		}
+		else
+		{
+			return String.format("World: %d, From: %s, To: %s, ETA: %s.",
+				world,
+				formatter.format(from),
+				formatter.format(to),
+				formatter.format(eta));
 		}
 	}
 
@@ -97,5 +204,29 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 			.build());
 	}
 
-	//You see a shooting star! The star looks like it will land on Crandor<br>or Karamja in the next 39 to 41 minutes.
+	private Instant getTime(String h, String m)
+	{
+		final int hours = h != null ? Integer.parseInt(h) : 0;
+		final int minutes = m != null ? Integer.parseInt(m) : 0;
+
+		return Instant.now().plus(Duration.ofHours(hours)).plus(Duration.ofMinutes(minutes));
+	}
+
+	/*
+	You see a shooting star! The star looks like it will land on Crandor or Karamja in the next 39 to 41 minutes.
+	You see a shooting star! The star looks like it will land in the Kharidian Desert in the next 1 hour 34 minutes to 1 hour 36 minutes.
+	You see a shooting star! The star looks like it will land in the Feldip Hills or on the Isle of Souls in the next 1 hour 51 minutes to 1 hour 53 minutes.
+	You see a shooting star! The star looks like it will land in Morytania in the next 1 hour 26 minutes to 1 hour 28 minutes.
+	You see a shooting star! The star looks like it will land in the Wilderness in the next 1 hour 31 minutes to 1 hour 33 minutes.
+	You see a shooting star! The star looks like it will land in Tirannwn in the next 1 hour 24 minutes to 1 hour 26 minutes.
+	You see a shooting star! The star looks like it will land in Great Kourend in the next 1 hour 29 minutes to 1 hour 31 minutes.
+	You see a shooting star! The star looks like it will land in Kandarin in the next 1 hour 23 minutes to 1 hour 25 minutes.
+	You see a shooting star! The star looks like it will land in Kandarin in the next 52 to 54 minutes.
+	You see a shooting star! The star looks like it will land in Misthalin in the next 1 hour 3 minutes to 1 hour 5 minutes.
+	You see a shooting star! The star looks like it will land in Misthalin in the next 1 hour 0 minutes to 1 hour 2 minutes.
+	You see a shooting star! The star looks like it will land in Misthalin in the next 59 minutes to 1 hour 1 minutes.
+	 */
+
+	//^You see a shooting star! The star looks like it will land (?:in |on )(?:the )?([\w ]+) in the next (?:(\d+) hours? )?(?:(\d+)(?: minutes?)? )?to (?:(\d+) hours? )?(?:(\d+) minutes)?\.$
+	//^You see a shooting star! The star looks like it will land ((?:in |on )(?:the )?((?:(?!\bor\b)[\w ])+)(?: or (?:in |on )?(?:the )?([\w ]+))? in the next (?:(\d+) hours? )?(?:(\d+)(?: minutes?)? )?to (?:(\d+) hours? )?(?:(\d+) minutes)?\.)$
 }
