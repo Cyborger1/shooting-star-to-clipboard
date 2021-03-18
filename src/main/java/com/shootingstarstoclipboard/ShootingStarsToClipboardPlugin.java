@@ -139,6 +139,11 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 						break;
 				}
 
+				if (config.appendNewLine())
+				{
+					copyText += System.lineSeparator();
+				}
+
 				Toolkit.getDefaultToolkit()
 					.getSystemClipboard()
 					.setContents(new StringSelection(copyText), null);

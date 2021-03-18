@@ -61,4 +61,15 @@ public interface ShootingStarsToClipboardConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(
+		keyName = "appendNewLine",
+		name = "Append NewLine",
+		description = "Adds a newline return at the end of the copied text.",
+		position = 6
+	)
+	default boolean appendNewLine()
+	{
+		return true;
+	}
 }
