@@ -84,4 +84,15 @@ public interface ShootingStarsToClipboardConfig extends Config
 	{
 		return true;
 	}
+
+	@ConfigItem(
+		keyName = "showChatMessage",
+		name = "Show Chat Message",
+		description = "Show a message in the chatbox confirming the copy worked.",
+		position = 8
+	)
+	default boolean showChatMessage()
+	{
+		return true;
+	}
 }

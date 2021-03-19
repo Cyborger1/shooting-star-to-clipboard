@@ -148,7 +148,10 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 					.getSystemClipboard()
 					.setContents(new StringSelection(copyText), null);
 
-				sendChatMessage(String.format("Shooting Stars info copied to clipboard for world %d.", client.getWorld()));
+				if (config.showChatMessage())
+				{
+					sendChatMessage(String.format("Shooting Stars info copied to clipboard for world %d.", client.getWorld()));
+				}
 			}
 		}
 	}
