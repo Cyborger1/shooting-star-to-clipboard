@@ -156,7 +156,7 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 	private String getDelimitedText(String loc1, String loc2, String delim, DateTimeFormatter formatter, Instant from, Instant to, Instant eta)
 	{
 		String loc = loc1;
-		if (loc2 != null)
+		if (loc2 != null && config.showBothLocations())
 		{
 			loc = loc + "/" + loc2;
 		}
@@ -165,7 +165,7 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(client.getWorld());
-		if (config.addPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
+		if (config.showPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
 		{
 			sb.append(" (pvp)");
 		}
@@ -193,7 +193,7 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 
 		sb.append("World: ").append(client.getWorld());
 
-		if (config.addPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
+		if (config.showPVPIdentifier() && WorldType.isPvpWorld(client.getWorldType()))
 		{
 			sb.append(" (pvp)");
 		}
