@@ -50,8 +50,8 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 	private static final Pattern STAR_PATTERN = Pattern.compile(
 		"^You see a shooting star! " +
 			"The star looks like it will land " +
-			"((?:in |on )(?:the )?((?:(?!\\bor\\b)[\\w ])+)" +
-			"(?: or (?:in |on )?(?:the )?([\\w ]+))? " +
+			"((?:in |on )(?:the )?((?:(?!\\bor\\b)[\\w' ])+)" +
+			"(?: or (?:in |on )?(?:the )?([\\w' ]+))? " +
 			"in the next (?:(\\d+) hours? )?(?:(\\d+)(?: minutes?)? )?" +
 			"to (?:(\\d+) hours? )?(?:(\\d+) minutes)?\\.)$");
 
@@ -253,5 +253,5 @@ public class ShootingStarsToClipboardPlugin extends Plugin
 	 */
 
 	//^You see a shooting star! The star looks like it will land (?:in |on )(?:the )?([\w ]+) in the next (?:(\d+) hours? )?(?:(\d+)(?: minutes?)? )?to (?:(\d+) hours? )?(?:(\d+) minutes)?\.$
-	//^You see a shooting star! The star looks like it will land ((?:in |on )(?:the )?((?:(?!\bor\b)[\w ])+)(?: or (?:in |on )?(?:the )?([\w ]+))? in the next (?:(\d+) hours? )?(?:(\d+)(?: minutes?)? )?to (?:(\d+) hours? )?(?:(\d+) minutes)?\.)$
+	//^You see a shooting star! The star looks like it will land ((?:in |on )(?:the )?((?:(?!\bor\b)[\w' ])+)(?: or (?:in |on )?(?:the )?([\w' ]+))? in the next (?:(\d+) hours? )?(?:(\d+)(?: minutes?)? )?to (?:(\d+) hours? )?(?:(\d+) minutes)?\.)$
 }
